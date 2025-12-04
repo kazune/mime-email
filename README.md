@@ -45,7 +45,7 @@ account default
 host mail.example.com
 port 465
 auth on
-from me@usp-lab.com
+from me@example.com
 user me
 password MyPassword123
 tls on
