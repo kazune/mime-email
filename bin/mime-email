@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+VERSION="Thu Dec  4 13:40:13 JST 2025"
+WRITER="Kazune Iga"
+set -euo pipefail
+trap 'echo "Error($LINENO)[$(basename "$0")]: ${PIPESTATUS[@]}" 1>&2' ERR
+
+cmdname=$(basename "$0")
+
+usage() {
+	cat <<EOF
+Usage: $cmdname [OPTIONS] [<file>]
+Generate a MIME-formatted email message
+
+Required:
+  --from <addr>
+  one of: --to <addr> | --cc <addr> | --bcc <addr>
+
+Options:
+  --from <addr>        set Sender address
+  --to <addr>          add To recipient (repeatable)
+  --cc <addr>          add Cc recipient (repeatable)
+  --bcc <addr>         add Bcc recipient (repeatable)
+  --subject <text>     set subject
+  --date <string>      set date (RFC 5322 / date -R)
+  --attach <file>      attach file (repeatable; MIME type auto-detected)
+
+Body input:
+  <file>               read body from file
+  -                    read body from stdin
+  (none)               read body from stdin
+
+Example:
+  $cmdname \\
+    --from a@example.com \\
+    --to b@example.com \\
+    --to c@example.com \\
+    --attach doc.pdf \\
+    body.txt
+
+Example for msmtp:
+  $cmdname [OPTIONS]... | msmtp -v -t
+
+Version:
+  $VERSION
+
+EOF
+	exit 1
+}
+
+
+# ------------------------------
+# Initialize
+# ------------------------------
+FROM=""
+TO_LIST=()
+CC_LIST=()
+BCC_LIST=()
+SUBJECT=""
+BODY_FILE=""
+DATE_STR=$(date -R)
+ATTACH_FILES=()
+
+# ------------------------------
+# parse args
+# ------------------------------
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		--from)
+			FROM="$2"
+			shift 2
+			;;
+		--to)
+			TO_LIST+=("$2")
+			shift 2
+			;;
+		--cc)
+			CC_LIST+=("$2")
+			shift 2
+			;;
+		--bcc)
+			BCC_LIST+=("$2")
+			shift 2
+			;;
+		--subject)
+			SUBJECT="$2"
+			shift 2
+			;;
+		--date)
+			DATE_STR="$2"
+			shift 2
+			;;
+		--attach)
+			ATTACH_FILES+=("$2")
+			shift 2
+			;;
+		--)
+			shift
+			if [[ $# -eq 0 ]]; then
+				break
+			elif [[ $# -eq 1 ]]; then
+				if [[ -z "$BODY_FILE" ]]; then
+					BODY_FILE="$1"
+					shift
+					break
+				else
+					echo "Error($LINENO)[$cmdname]: body file already specified: $1" >&2
+					exit 1
+				fi
+			else
+				echo "Error($LINENO)[$cmdname]: too many arguments after --" >&2
+				exit 1
+			fi
+			;;
+		-)
+			if [[ -z "$BODY_FILE" ]]; then
+				BODY_FILE="-"
+				shift
+			else
+				usage
+				exit 1
+			fi
+			;;
+		*)
+			if [[ "$1" == -* ]]; then
+				usage
+				exit 1
+			fi
+			if [[ -z "$BODY_FILE" ]]; then
+				BODY_FILE="$1"
+				shift
+			else
+				usage
+				exit 1
+			fi
+			;;
+	esac
+done
+
+# ------------------------------
+# check required param
+# ------------------------------
+if [[ -z "$FROM" ]]; then
+	echo "Error($LINENO)[$cmdname]: --from is mandatory." >&2
+	exit 1
+fi
+if [[ ${#TO_LIST[@]} -eq 0 ]] && [[ ${#CC_LIST[@]} -eq 0 ]] && [[ ${#BCC_LIST[@]} -eq 0 ]]; then
+	echo "Error($LINENO)[$cmdname]: at least one destination (to/cc/bcc) is required." >&2
+	exit 1
+fi
+
+# ------------------------------
+# check body file
+# ------------------------------
+if [[ ! -z "$BODY_FILE" ]] && [[ ! "$BODY_FILE" == "-" ]] && [[ "$BODY_FILE" == "-" ]]; then
+	if [[ ! -f "$BODY_FILE" ]]; then
+		echo "Error($LINENO)[$cmdname]: body file not found: '$BODY_FILE'" >&2
+		exit 1
+	fi
+fi
+
+# ------------------------------
+# read body func
+# ------------------------------
+cat_body_file() {
+	local file="$1"
+	if [[ -z "$file" ]]; then
+		cat
+	else
+		if [[ "$file" == "-" ]]; then
+			cat
+		else
+			if [[ ! -f "$file" ]]; then
+				echo "Error($LINENO)[$cmdname]: body file not found: $file" >&2
+				exit 1
+			fi
+			cat -- "$file"
+		fi
+	fi
+}
+
+# ------------------------------
+# check attach option
+# ------------------------------
+for f in "${ATTACH_FILES[@]}"; do
+	if [[ ! -f "$f" ]]; then
+		echo "Error($LINENO)[$cmdname]: attachment file not found: $f" >&2
+		exit 1
+	fi
+done
+
+get_mime_type() {
+	local f="$1"
+	if command -v file >/dev/null 2>&1; then
+		file --mime-type -b -- "$f"
+	else
+		echo "application/octet-stream"
+	fi
+}
+
+generate_boundary() {
+	echo "----MIME-BOUNDARY-$(date +%s)-$$-$RANDOM"
+}
+
+HAS_ATTACH=0
+[[ ${#ATTACH_FILES[@]} -gt 0 ]] && HAS_ATTACH=1
+
+# ------------------------------
+# header
+# ------------------------------
+
+echo "From: $FROM"
+
+# join addresses support func
+join_by() { local IFS="$1"; shift; echo "$*"; }
+
+echo "To: $(join_by ', ' "${TO_LIST[@]}")"
+
+if [[ ${#CC_LIST[@]} -gt 0 ]]; then
+	echo "Cc: $(join_by ', ' "${CC_LIST[@]}")"
+fi
+
+if [[ ${#BCC_LIST[@]} -gt 0 ]]; then
+	echo "Bcc: $(join_by ', ' "${BCC_LIST[@]}")"
+fi
+
+[[ -n "$SUBJECT" ]] && echo "Subject: $SUBJECT"
+
+echo "Date: $DATE_STR"
+echo "MIME-Version: 1.0"
+
+# ------------------------------
+# body and attach
+# ------------------------------
+if [[ $HAS_ATTACH -eq 0 ]]; then
+	echo "Content-Type: text/plain; charset=\"utf-8\""
+	echo "Content-Transfer-Encoding: 8bit"
+	echo
+	cat_body_file "$BODY_FILE"
+else
+	BOUNDARY=$(generate_boundary)
+	echo "Content-Type: multipart/mixed; boundary=\"$BOUNDARY\""
+	echo
+	echo "This is a multi-part message in MIME format."
+	echo
+	echo "--$BOUNDARY"
+	echo "Content-Type: text/plain; charset=\"utf-8\""
+	echo "Content-Transfer-Encoding: 8bit"
+	echo
+	cat_body_file "$BODY_FILE"
+	echo
+
+	for f in "${ATTACH_FILES[@]}"; do
+		BASENAME=$(basename -- "$f")
+		MIME_TYPE=$(get_mime_type "$f")
+		echo "--$BOUNDARY"
+		echo "Content-Type: $MIME_TYPE; name=\"$BASENAME\""
+		echo "Content-Transfer-Encoding: base64"
+		echo "Content-Disposition: attachment; filename=\"$BASENAME\""
+		echo
+		base64 -- "$f"
+		echo
+	done
+
+	echo "--$BOUNDARY--"
+fi
+

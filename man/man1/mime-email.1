@@ -1,0 +1,126 @@
+.TH MIME-EMAIL 1 "2025-12" "mime-email" "User Commands"
+
+.SH NAME
+mime-email \- generate a MIME-formatted email message
+
+.SH SYNOPSIS
+.B mime-email
+[\fIOPTION\fR]... [\fIFILE\fR]
+
+.SH DESCRIPTION
+.B mime-email
+constructs a MIME-formatted email message from command-line options and an optional body file.  
+The resulting message is written to standard output.
+
+The message body is taken from
+.IR FILE ,
+from standard input when
+.I FILE
+is "\-",
+or from standard input when
+.I FILE
+is omitted.
+
+The following requirements apply:
+
+.IP \[bu] 2
+.B --from
+must be specified.
+
+.IP \[bu]
+At least one of
+.BR --to ,
+.BR --cc ,
+or
+.BR --bcc
+must be provided.
+
+.IP \[bu]
+At most one FILE may be specified.
+
+.SH OPTIONS
+.TP
+.BI --from= ADDR
+Set the sender address.  
+This option is required.
+
+.TP
+.BI --to= ADDR
+Add a recipient address.  
+May be given multiple times.
+
+.TP
+.BI --cc= ADDR
+Add a Cc address.  
+May be given multiple times.
+
+.TP
+.BI --bcc= ADDR
+Add a Bcc address.  
+May be given multiple times.
+
+.TP
+.BI --subject= TEXT
+Set the message subject.
+
+.TP
+.BI --date= STRING
+Set the Date header.  
+This option accepts any string without validation, but the output of
+.IR date -R
+is recommended.
+
+.TP
+.BI --attach= FILE
+Attach a file to the message.  
+May be given multiple times.  
+The MIME type is determined by invoking
+.IR "file --mime-type" .
+
+.SH BODY INPUT
+.B FILE
+specifies the message body file.  
+If
+.B FILE
+is "\-" or omitted altogether, the body is read from standard input.
+
+.SH EXAMPLES
+Generate a message from a body file:
+.PP
+.nf
+mime-email --from=a@example.com --to=b@example.com body.txt
+.fi
+
+Attach files and read the body from standard input:
+.PP
+.nf
+mime-email --from=a@example.com --to=b@example.com \\
+           --attach=doc.pdf --attach=data.xlsx -
+.fi
+
+Send a message with multiple Bcc recipients:
+.PP
+.nf
+mime-email --from=a@example.com --to=a@example.com \\
+           --bcc='b@example.com' --bcc='c@example.com'
+.fi
+
+Send a message directly via msmtp:
+.PP
+.nf
+mime-email --from=a@example.com --to=b@example.com \\
+           --subject="Test" body.txt | msmtp -v -t
+.fi
+
+.SH SEE ALSO
+.BR mail (1),
+.BR sendmail (8),
+.BR date (1),
+.BR file (1)
+
+.SH AUTHOR
+Written by Kazune Iga
+
+.SH VERSION
+Thu Dec  4 13:40:13 JST 2025
+
