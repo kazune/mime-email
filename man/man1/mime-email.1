@@ -9,7 +9,7 @@ mime-email \- generate a MIME-formatted email message
 
 .SH DESCRIPTION
 .B mime-email
-constructs a MIME-formatted email message from command-line options and an optional body file.  
+constructs a MIME-formatted email message from command-line options and an optional body file.
 The resulting message is written to standard output.
 
 The message body is taken from
@@ -40,46 +40,46 @@ At most one FILE may be specified.
 
 .SH OPTIONS
 .TP
-.BI --from= ADDR
-Set the sender address.  
+.B --from \fIADDR\fR
+Set the sender address.
 This option is required.
 
 .TP
-.BI --to= ADDR
-Add a recipient address.  
+.B --to \fIADDR\fR
+Add a recipient address.
 May be given multiple times.
 
 .TP
-.BI --cc= ADDR
-Add a Cc address.  
+.B --cc \fIADDR\fR
+Add a Cc address.
 May be given multiple times.
 
 .TP
-.BI --bcc= ADDR
-Add a Bcc address.  
+.B --bcc \fIADDR\fR
+Add a Bcc address.
 May be given multiple times.
 
 .TP
-.BI --subject= TEXT
+.B --subject \fITEXT\fR
 Set the message subject.
 
 .TP
-.BI --date= STRING
-Set the Date header.  
+.B --date \fISTRING\fR
+Set the Date header.
 This option accepts any string without validation, but the output of
 .IR date -R
 is recommended.
 
 .TP
-.BI --attach= FILE
-Attach a file to the message.  
-May be given multiple times.  
+.B --attach \fIFILE\fR
+Attach a file to the message.
+May be given multiple times.
 The MIME type is determined by invoking
 .IR "file --mime-type" .
 
 .SH BODY INPUT
 .B FILE
-specifies the message body file.  
+specifies the message body file.
 If
 .B FILE
 is "\-" or omitted altogether, the body is read from standard input.
@@ -88,28 +88,28 @@ is "\-" or omitted altogether, the body is read from standard input.
 Generate a message from a body file:
 .PP
 .nf
-mime-email --from=a@example.com --to=b@example.com body.txt
+mime-email --from a@example.com --to b@example.com body.txt
 .fi
 
 Attach files and read the body from standard input:
 .PP
 .nf
-mime-email --from=a@example.com --to=b@example.com \\
-           --attach=doc.pdf --attach=data.xlsx -
+mime-email --from a@example.com --to b@example.com \\
+           --attach doc.pdf --attach data.xlsx -
 .fi
 
 Send a message with multiple Bcc recipients:
 .PP
 .nf
-mime-email --from=a@example.com --to=a@example.com \\
-           --bcc='b@example.com' --bcc='c@example.com'
+mime-email --from a@example.com --to a@example.com \\
+           --bcc 'b@example.com' --bcc 'c@example.com'
 .fi
 
 Send a message directly via msmtp:
 .PP
 .nf
-mime-email --from=a@example.com --to=b@example.com \\
-           --subject="Test" body.txt | msmtp -v -t
+mime-email --from a@example.com --to b@example.com \\
+           --subject "Test" body.txt | msmtp -v -t
 .fi
 
 .SH SEE ALSO
