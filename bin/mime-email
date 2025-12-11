@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION="Thu Dec  4 13:40:13 JST 2025"
+VERSION="Thu Dec 11 14:53:14 JST 2025"
 WRITER="Kazune Iga"
 set -euo pipefail
 trap 'echo "Error($LINENO)[$(basename "$0")]: ${PIPESTATUS[@]}" 1>&2' ERR
@@ -61,28 +61,118 @@ DATE_STR=$(date -R)
 ATTACH_FILES=()
 
 # ------------------------------
+# encode_str — produce a MIME encoded-word for a display name.
+#
+# Usage:
+#   encode_str STRING
+#
+# Description:
+#   Outputs STRING as-is when it consists solely of ASCII alphanumeric
+#   characters.  For any other input, STRING is encoded as UTF-8, then
+#   Base64-encoded, and finally emitted in the MIME encoded-word form:
+#
+#       =?UTF-8?B?BASE64-ENCODED-STRING?=
+#
+#   This format is suitable for use in RFC 2047–compliant header fields such
+#   as display names in email addresses.
+#
+# Behavior:
+#   • Alphanumeric strings are not encoded.
+#   • Non-alphanumeric characters—including spaces and non-ASCII—trigger
+#     UTF-8 Base64 encoding.
+#   • The Base64 output is stripped of newlines before constructing the
+#     encoded-word.
+#
+# Arguments:
+#   $1 — The string to encode.
+# ------------------------------
+
+encode_str() {
+	local str="$1"
+	if [[ $str =~ ^[[:alnum:]]*$ ]]; then
+		printf '%s\n' "$str"
+		return 0
+	fi
+	local b64="$(printf '%s' "$str" | base64 | tr -d '\n')"
+	printf '=?UTF-8?B?%s?=\n' "$b64"
+}
+
+# ------------------------------
+# encode_addr — parse and format an address string.
+#
+# Usage:
+#   encode_addr STRING
+#
+# Description:
+#   Interprets STRING as a sequence of words where the final whitespace‐separated
+#   field is an address and all preceding text constitutes a display name.
+#   The display name, when present, has leading and trailing whitespace removed
+#   and is then passed to ‘encode_str’.  The function prints either the raw
+#   address or the formatted output:
+#
+#       ENCODED-DISPLAY-NAME <ADDRESS>
+#
+#   If STRING contains no whitespace, it is treated as an address and printed
+#   verbatim.
+#
+# Behavior:
+#   • If STRING is empty, no output is produced.
+#   • The rightmost non-blank field is taken as the address.
+#   • Display-name trimming removes only leading and trailing whitespace.
+#   • When the display name is empty, the address alone is printed.
+#
+# Requirements:
+#   The function ‘encode_str’ must be available and produce an encoded
+#   representation of a display name suitable for insertion into the output
+#   format shown above.
+# ------------------------------
+
+encode_addr() {
+	local str="$1"
+	[[ -z "$str" ]] && return 0
+	local disp
+	local addr
+	if [[ "$str" =~ ^(.*)[[:space:]]+([^[:space:]]+)$ ]]; then
+		disp="${BASH_REMATCH[1]}"
+		addr="${BASH_REMATCH[2]}"
+	else
+		printf '%s\n' "$str"
+		return 0
+	fi
+	disp="${disp#"${disp%%[![:space:]]*}"}"
+	disp="${disp%"${disp##*[![:space:]]}"}"
+	if [[ -z "$disp" ]]; then
+		printf '%s\n' "$addr"
+		return 0
+	fi
+	disp="$(encode_str "$disp")"
+	printf '%s <%s>\n' "$disp" "$addr"
+}
+
+
+# ------------------------------
 # parse args
 # ------------------------------
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--from)
-			FROM="$2"
+			FROM="$(encode_addr "$2")"
 			shift 2
 			;;
 		--to)
-			TO_LIST+=("$2")
+			TO_LIST+=("$(encode_addr "$2")")
 			shift 2
 			;;
 		--cc)
-			CC_LIST+=("$2")
+			CC_LIST+=("$(encode_addr "$2")")
 			shift 2
 			;;
 		--bcc)
-			BCC_LIST+=("$2")
+			BCC_LIST+=("$(encode_addr "$2")")
 			shift 2
 			;;
 		--subject)
-			SUBJECT="$2"
+			SUBJECT="$(encode_str "$2")"
 			shift 2
 			;;
 		--date)
@@ -211,7 +301,7 @@ HAS_ATTACH=0
 echo "From: $FROM"
 
 # join addresses support func
-join_by() { local IFS="$1"; shift; echo "$*"; }
+join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
 
 echo "To: $(join_by ', ' "${TO_LIST[@]}")"
 

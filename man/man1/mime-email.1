@@ -42,21 +42,26 @@ At most one FILE may be specified.
 .TP
 .B --from \fIADDR\fR
 Set the sender address.
+A display name may precede the address when multiple words are given;
+the last word is treated as the address.
 This option is required.
 
 .TP
 .B --to \fIADDR\fR
 Add a recipient address.
+A display name may precede the address when multiple words are given.
 May be given multiple times.
 
 .TP
 .B --cc \fIADDR\fR
 Add a Cc address.
+A display name may precede the address when multiple words are given.
 May be given multiple times.
 
 .TP
 .B --bcc \fIADDR\fR
 Add a Bcc address.
+A display name may precede the address when multiple words are given.
 May be given multiple times.
 
 .TP
@@ -85,18 +90,22 @@ If
 is "\-" or omitted altogether, the body is read from standard input.
 
 .SH EXAMPLES
+
 Generate a message from a body file:
 .PP
 .nf
 mime-email --from a@example.com --to b@example.com body.txt
 .fi
 
-Attach files and read the body from standard input:
+Use a display name with an address:
 .PP
 .nf
-mime-email --from a@example.com --to b@example.com \\
-           --attach doc.pdf --attach data.xlsx -
+mime-email --from "Alice Smith a@example.com" --to "Bob b@example.com" \\
+           --subject "Hello" body.txt
 .fi
+
+.PP
+
 
 Send a message with multiple Bcc recipients:
 .PP
@@ -122,5 +131,5 @@ mime-email --from a@example.com --to b@example.com \\
 Written by Kazune Iga
 
 .SH VERSION
-Thu Dec  4 13:40:13 JST 2025
+Thu Dec 11 14:53:14 JST 2025
 
