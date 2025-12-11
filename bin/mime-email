@@ -89,7 +89,7 @@ ATTACH_FILES=()
 
 encode_str() {
 	local str="$1"
-	if [[ $str =~ ^[[:alnum:]]*$ ]]; then
+	if [[ $str =~ ^[0-9a-zA-Z]*$ ]]; then
 		printf '%s\n' "$str"
 		return 0
 	fi
@@ -271,12 +271,14 @@ cat_body_file() {
 # ------------------------------
 # check attach option
 # ------------------------------
-for f in "${ATTACH_FILES[@]}"; do
-	if [[ ! -f "$f" ]]; then
-		echo "Error($LINENO)[$cmdname]: attachment file not found: $f" >&2
-		exit 1
-	fi
-done
+if [[ "${#ATTACH_FILES[@]}" -gt 0 ]]; then
+	for f in "${ATTACH_FILES[@]}"; do
+		if [[ ! -f "$f" ]]; then
+			echo "Error($LINENO)[$cmdname]: attachment file not found: $f" >&2
+			exit 1
+		fi
+	done
+fi
 
 get_mime_type() {
 	local f="$1"
