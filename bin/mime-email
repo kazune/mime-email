@@ -241,7 +241,7 @@ fi
 # ------------------------------
 # check body file
 # ------------------------------
-if [[ ! -z "$BODY_FILE" ]] && [[ ! "$BODY_FILE" == "-" ]] && [[ "$BODY_FILE" == "-" ]]; then
+if [[ ! -z "$BODY_FILE" ]] && [[ ! "$BODY_FILE" == "-" ]]; then
 	if [[ ! -f "$BODY_FILE" ]]; then
 		echo "Error($LINENO)[$cmdname]: body file not found: '$BODY_FILE'" >&2
 		exit 1
@@ -296,16 +296,20 @@ generate_boundary() {
 HAS_ATTACH=0
 [[ ${#ATTACH_FILES[@]} -gt 0 ]] && HAS_ATTACH=1
 
+# join addresses support func
+join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
+
 # ------------------------------
 # header
 # ------------------------------
 
+exec > >(sed 's/\r*$/\r/')
+
 echo "From: $FROM"
 
-# join addresses support func
-join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
-
-echo "To: $(join_by ', ' "${TO_LIST[@]}")"
+if [[ ${#TO_LIST[@]} -gt 0 ]]; then
+	echo "To: $(join_by ', ' "${TO_LIST[@]}")"
+fi
 
 if [[ ${#CC_LIST[@]} -gt 0 ]]; then
 	echo "Cc: $(join_by ', ' "${CC_LIST[@]}")"
