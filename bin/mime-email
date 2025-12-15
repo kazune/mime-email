@@ -300,10 +300,15 @@ HAS_ATTACH=0
 join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
 
 # ------------------------------
-# header
+# output
 # ------------------------------
 
+# set CRLF termination for RFC rules.
 exec > >(sed 's/\r*$/\r/')
+
+# ------------------------------
+# header
+# ------------------------------
 
 echo "From: $FROM"
 
