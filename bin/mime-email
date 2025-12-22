@@ -303,8 +303,13 @@ join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
 # output
 # ------------------------------
 
-# set CRLF termination for RFC rules.
-exec > >(sed 's/\r*$/\r/')
+# -------- BEGIN RFC5322 CRLF LINE ENDINGS FIX --------
+# RFC 5322 / RFC 5321 require CRLF (\r\n) line endings for email messages.
+# Enable the following code to convert LF to CRLF for strict RFC compliance.
+
+# exec > >(sed 's/\r*$/\r/')
+
+# -------- END RFC5322 CRLF LINE ENDINGS FIX --------
 
 # ------------------------------
 # header

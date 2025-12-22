@@ -121,15 +121,30 @@ mime-email --from a@example.com --to b@example.com \\
            --subject "Test" body.txt | msmtp -v -t
 .fi
 
+.SH LINE ENDINGS
+By default,
+.B mime-email
+does not guarantee CRLF (\\r\\n) line endings as required by RFC 5322 / 5321.
+On most systems, the output will use LF (\\n) line endings.
+
+In practice, many SMTP servers accept LF-only messages without issues.
+
+If strict RFC compliance is required, line endings can be converted to CRLF
+either by enabling the corresponding code in the script or by applying a
+post-processing filter such as
+.IR sed (1)
+in a downstream pipeline.
+
 .SH SEE ALSO
 .BR mail (1),
 .BR sendmail (8),
 .BR date (1),
 .BR file (1)
+.BR sed (1)
 
 .SH AUTHOR
 Written by Kazune Iga
 
 .SH VERSION
-Thu Dec 11 14:53:14 JST 2025
+Mon Dec 22 12:20:27 JST 2025
 
