@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-VERSION="Thu Dec 11 14:53:14 JST 2025"
+VERSION="Mon Dec 22 12:20:27 JST 2025"
 WRITER="Kazune Iga"
 set -euo pipefail
 trap 'echo "Error($LINENO)[$(basename "$0")]: ${PIPESTATUS[@]}" 1>&2' ERR
 
-cmdname=$(basename "$0")
+cmdname="$(basename "$0")"
 
 usage() {
 	cat <<EOF
@@ -57,7 +57,7 @@ CC_LIST=()
 BCC_LIST=()
 SUBJECT=""
 BODY_FILE=""
-DATE_STR=$(date -R)
+DATE_STR="$(date -R)"
 ATTACH_FILES=()
 
 # ------------------------------
@@ -89,12 +89,11 @@ ATTACH_FILES=()
 
 encode_str() {
 	local str="$1"
-	if [[ $str =~ ^[0-9a-zA-Z]*$ ]]; then
+	if [[ "$str" =~ ^[0-9a-zA-Z]*$ ]]; then
 		printf '%s\n' "$str"
 		return 0
 	fi
-	local b64="$(printf '%s' "$str" | base64 | tr -d '\n')"
-	printf '=?UTF-8?B?%s?=\n' "$b64"
+	printf '%s' "$str" | base64 | tr -d '\r\n' | fold -w 76 | sed 's/^/ =?UTF-8?B?/; s/$/?=/'
 }
 
 # ------------------------------
@@ -153,7 +152,7 @@ encode_addr() {
 # ------------------------------
 # parse args
 # ------------------------------
-while [[ $# -gt 0 ]]; do
+while [[ "$#" -gt 0 ]]; do
 	case "$1" in
 		--from)
 			FROM="$(encode_addr "$2")"
@@ -185,9 +184,9 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--)
 			shift
-			if [[ $# -eq 0 ]]; then
+			if [[ "$#" -eq 0 ]]; then
 				break
-			elif [[ $# -eq 1 ]]; then
+			elif [[ "$#" -eq 1 ]]; then
 				if [[ -z "$BODY_FILE" ]]; then
 					BODY_FILE="$1"
 					shift
@@ -233,7 +232,7 @@ if [[ -z "$FROM" ]]; then
 	echo "Error($LINENO)[$cmdname]: --from is mandatory." >&2
 	exit 1
 fi
-if [[ ${#TO_LIST[@]} -eq 0 ]] && [[ ${#CC_LIST[@]} -eq 0 ]] && [[ ${#BCC_LIST[@]} -eq 0 ]]; then
+if [[ "${#TO_LIST[@]}" -eq 0 ]] && [[ "${#CC_LIST[@]}" -eq 0 ]] && [[ "${#BCC_LIST[@]}" -eq 0 ]]; then
 	echo "Error($LINENO)[$cmdname]: at least one destination (to/cc/bcc) is required." >&2
 	exit 1
 fi
@@ -294,7 +293,7 @@ generate_boundary() {
 }
 
 HAS_ATTACH=0
-[[ ${#ATTACH_FILES[@]} -gt 0 ]] && HAS_ATTACH=1
+[[ "${#ATTACH_FILES[@]}" -gt 0 ]] && HAS_ATTACH=1
 
 # join addresses support func
 join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
@@ -317,15 +316,15 @@ join_by() { local IFS="$1"; shift; printf '%s\n' "$*"; }
 
 echo "From: $FROM"
 
-if [[ ${#TO_LIST[@]} -gt 0 ]]; then
+if [[ "${#TO_LIST[@]}" -gt 0 ]]; then
 	echo "To: $(join_by ', ' "${TO_LIST[@]}")"
 fi
 
-if [[ ${#CC_LIST[@]} -gt 0 ]]; then
+if [[ "${#CC_LIST[@]}" -gt 0 ]]; then
 	echo "Cc: $(join_by ', ' "${CC_LIST[@]}")"
 fi
 
-if [[ ${#BCC_LIST[@]} -gt 0 ]]; then
+if [[ "${#BCC_LIST[@]}" -gt 0 ]]; then
 	echo "Bcc: $(join_by ', ' "${BCC_LIST[@]}")"
 fi
 
@@ -337,13 +336,14 @@ echo "MIME-Version: 1.0"
 # ------------------------------
 # body and attach
 # ------------------------------
-if [[ $HAS_ATTACH -eq 0 ]]; then
+if [[ "$HAS_ATTACH" -eq 0 ]]; then
 	echo "Content-Type: text/plain; charset=\"utf-8\""
 	echo "Content-Transfer-Encoding: 8bit"
 	echo
 	cat_body_file "$BODY_FILE"
+	echo
 else
-	BOUNDARY=$(generate_boundary)
+	BOUNDARY="$(generate_boundary)"
 	echo "Content-Type: multipart/mixed; boundary=\"$BOUNDARY\""
 	echo
 	echo "This is a multi-part message in MIME format."
@@ -356,14 +356,15 @@ else
 	echo
 
 	for f in "${ATTACH_FILES[@]}"; do
-		BASENAME=$(basename -- "$f")
-		MIME_TYPE=$(get_mime_type "$f")
+		BASENAME="$(basename -- "$f")"
+		MIME_TYPE="$(get_mime_type "$f")"
 		echo "--$BOUNDARY"
 		echo "Content-Type: $MIME_TYPE; name=\"$BASENAME\""
 		echo "Content-Transfer-Encoding: base64"
 		echo "Content-Disposition: attachment; filename=\"$BASENAME\""
 		echo
-		base64 -- "$f"
+		base64 < "$f" | tr -d '\r\n' | fold -w 76
+		echo
 		echo
 	done
 
