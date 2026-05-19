@@ -1,0 +1,99 @@
+MIME-EMAIL(1)                    User Commands                   MIME-EMAIL(1)
+
+NAME
+       mime-email - MIME 形式のメールメッセージを生成する
+
+SYNOPSIS
+       mime-email [OPTION]... [FILE]
+
+DESCRIPTION
+       mime-email は、コマンドラインオプションと任意の本文ファイルから
+       MIME 形式のメールメッセージを組み立てる。生成されたメッセージは
+       標準出力へ書き出される。
+
+       メッセージ本文は FILE から読み込まれる。FILE が "-" の場合、または
+       FILE が省略された場合は、標準入力から読み込まれる。
+
+       次の条件を満たす必要がある。
+
+       * --from は必須。
+
+       * --to、--cc、--bcc の少なくとも 1 つを指定する必要がある。
+
+       * FILE は最大 1 つまで指定できる。
+
+OPTIONS
+       --from ADDR
+              送信者アドレスを設定する。複数の単語が与えられた場合、
+              アドレスの前に表示名を置くことができる。このとき最後の単語が
+              アドレスとして扱われる。このオプションは必須。
+
+       --to ADDR
+              宛先アドレスを追加する。複数の単語が与えられた場合、
+              アドレスの前に表示名を置くことができる。複数回指定できる。
+
+       --cc ADDR
+              Cc アドレスを追加する。複数の単語が与えられた場合、
+              アドレスの前に表示名を置くことができる。複数回指定できる。
+
+       --bcc ADDR
+              Bcc アドレスを追加する。複数の単語が与えられた場合、
+              アドレスの前に表示名を置くことができる。複数回指定できる。
+
+       --subject TEXT
+              メッセージの件名を設定する。
+
+       --date STRING
+              Date ヘッダーを設定する。このオプションは任意の文字列を
+              検証せずに受け取るが、date -R の出力を使うことを推奨する。
+
+       --attach FILE
+              ファイルをメッセージに添付する。複数回指定できる。
+              MIME タイプは file --mime-type を実行して判定される。
+
+BODY INPUT
+       FILE はメッセージ本文のファイルを指定する。FILE が "-" の場合、
+       または FILE が省略された場合、本文は標準入力から読み込まれる。
+
+EXAMPLES
+       本文ファイルからメッセージを生成する。
+
+       mime-email --from a@example.com --to b@example.com body.txt
+
+       アドレスに表示名を付ける。
+
+       mime-email --from "Alice Smith a@example.com" --to "Bob b@example.com" \
+                  --subject "Hello" body.txt
+
+       複数の Bcc 宛先を指定してメッセージを送る。
+
+       mime-email --from a@example.com --to a@example.com \
+                  --bcc 'b@example.com' --bcc 'c@example.com'
+
+       msmtp 経由で直接メッセージを送信する。
+
+       mime-email --from a@example.com --to b@example.com \
+                  --subject "Test" body.txt | msmtp -v -t
+
+LINE ENDINGS
+       デフォルトでは、mime-email は RFC 5322 / 5321 で要求される
+       CRLF (\r\n) 改行を保証しない。多くのシステムでは、出力は
+       LF (\n) 改行になる。
+
+       実際には、多くの SMTP サーバーは LF のみのメッセージも問題なく
+       受け付ける。
+
+       厳密な RFC 準拠が必要な場合は、スクリプト内の該当コードを有効に
+       するか、後段のパイプラインで sed(1) などのフィルターを適用して、
+       改行を CRLF に変換できる。
+
+SEE ALSO
+       mail(1), sendmail(8), date(1), file(1), sed(1)
+
+AUTHOR
+       Kazune Iga によって作成された。
+
+VERSION
+       Mon Dec 22 12:20:27 JST 2025
+
+mime-email                          2025-12                      MIME-EMAIL(1)
